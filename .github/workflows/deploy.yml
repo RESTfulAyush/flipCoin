@@ -64,7 +64,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           git clone https://x-access-token:${{ secrets.GITOPS_PAT }}@github.com/RESTfulAyush/gitops-environments.git
-          cd gitops-environments/dev/taskflow
+          cd gitops-environments/dev/flipcoin
 
           # Update deployment.yaml image tag
           sed -i "s|image:.*|image: 307987836148.dkr.ecr.us-east-1.amazonaws.com/dev-app:${TAG}|" deployment.yaml
