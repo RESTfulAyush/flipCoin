@@ -18,7 +18,7 @@ export default function HomePage() {
         onClick={flipCoin}
         className="bg-white text-black px-6 py-2 rounded-lg shadow hover:bg-gray-100 transition"
       >
-        Flip Coin
+        Flip
       </button>
 
       {result && (
