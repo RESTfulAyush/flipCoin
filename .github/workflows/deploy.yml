@@ -1,0 +1,56 @@
+name: CI/CD - Docker Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**"
+      - "!README.md"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build, Scan, and Push to ECR
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: us-east-1
+      IMAGE_NAME: dev-app
+      ECR_REGISTRY: 307987836148.dkr.ecr.us-east-1.amazonaws.com
+      TAG: latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::307987836148:role/dev-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build Docker image
+        run: |
+          docker build -t $ECR_REGISTRY/$IMAGE_NAME:$TAG .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: os,library
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $ECR_REGISTRY/$IMAGE_NAME:$TAG
