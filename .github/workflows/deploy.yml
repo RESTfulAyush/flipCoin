@@ -21,7 +21,6 @@ jobs:
       AWS_REGION: us-east-1
       IMAGE_NAME: dev-app
       ECR_REGISTRY: 307987836148.dkr.ecr.us-east-1.amazonaws.com
-      TAG: latest
 
     steps:
       - name: Checkout code
@@ -37,6 +36,10 @@ jobs:
         run: |
           aws ecr get-login-password --region $AWS_REGION | \
           docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Set image tag from commit SHA
+        id: set-tag
+        run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Build Docker image
         run: |
@@ -54,3 +57,18 @@ jobs:
       - name: Push Docker image to ECR
         run: |
           docker push $ECR_REGISTRY/$IMAGE_NAME:$TAG
+
+      - name: Clone GitOps repo and update deployment
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git clone https://x-access-token:${{ secrets.GITOPS_PAT }}@github.com/RESTfulAyush/gitops-environments.git
+          cd gitops-environments/dev/taskflow
+
+          # Update deployment.yaml image tag
+          sed -i "s|image:.*|image: 307987836148.dkr.ecr.us-east-1.amazonaws.com/dev-app:${TAG}|" deployment.yaml
+
+          git add deployment.yaml
+          git commit -m "chore: update image tag to ${TAG}"
+          git push origin main
